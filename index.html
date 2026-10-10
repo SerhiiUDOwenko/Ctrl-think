@@ -1,1 +1,392 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Ctrl+Think | Навчальний наставник для школи</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css">
+  <script src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/contrib/auto-render.min.js"></script>
+  <style>
+    body { -webkit-tap-highlight-color: transparent; }
+    .chat-bubble { word-break: break-word; }
+  </style>
+</head>
+<body class="bg-slate-900 text-slate-100 flex flex-col h-screen overflow-hidden font-sans">
+
+  <!-- Сповіщення про статус мережі -->
+  <div id="offline-banner" class="hidden bg-amber-600 text-white text-xs px-4 py-1.5 flex justify-between items-center transition-all z-20">
+    <div class="flex items-center gap-1.5">
+      <span>⚠️ Інтернет відсутній. Працює локальний режим (Ollama).</span>
+    </div>
+    <button onclick="updateOnlineStatus()" class="underline font-bold">Оновити</button>
+  </div>
+
+  <!-- Верхня панель -->
+  <header class="bg-slate-800 border-b border-slate-700 px-3 py-2.5 flex flex-col gap-2 shadow-md z-10">
+    <div class="flex items-center justify-between">
+      <div class="flex items-center space-x-2">
+        <div class="w-8 h-8 rounded-xl bg-gradient-to-tr from-indigo-600 to-violet-500 flex items-center justify-center text-base font-black shadow">⌨️</div>
+        <div>
+          <h1 class="text-sm font-bold tracking-tight text-white flex items-center gap-1">
+            <span>Ctrl+Think</span>
+            <span class="text-[9px] bg-indigo-500/30 text-indigo-300 font-mono px-1.5 py-0.2 rounded border border-indigo-500/40">v1.2</span>
+          </h1>
+          <p class="text-[10px] text-slate-400">Думай замість копіювання</p>
+        </div>
+      </div>
+
+      <!-- Кнопка налаштувань -->
+      <div class="flex items-center space-x-1.5">
+        <select id="study-level" class="bg-slate-700 text-xs text-white rounded-lg px-2 py-1.5 border border-slate-600 focus:outline-none focus:border-indigo-500">
+          <option value="standard">📘 Стандарт</option>
+          <option value="advanced">🚀 Олімпіада / Профіль</option>
+          <option value="nmt">🎯 Підготовка до НМТ</option>
+        </select>
+        <button onclick="toggleModal('settings-modal')" class="p-1.5 bg-slate-700 hover:bg-slate-600 rounded-lg text-slate-300">
+          ⚙️
+        </button>
+      </div>
+    </div>
+
+    <!-- Вибір предмету -->
+    <div class="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none text-xs">
+      <span class="text-[11px] text-slate-400 shrink-0 font-medium">Предмет:</span>
+      <select id="study-subject" onchange="handleSubjectChange()" class="bg-slate-900 border border-indigo-500/50 text-indigo-200 rounded-lg px-2 py-1 focus:outline-none focus:border-indigo-400 text-xs w-full max-w-xs font-medium">
+        <option value="math">📐 Математика (Алгебра / Геометрія)</option>
+        <option value="english">🇬🇧 Англійська мова</option>
+        <option value="ukrainian">🇺🇦 Українська мова та література</option>
+        <option value="physics">⚡ Фізика</option>
+        <option value="chemistry">🧪 Хімія</option>
+        <option value="biology">🌿 Біологія / Природничі науки</option>
+        <option value="history">🏛️ Історія (України / Всесвітня)</option>
+        <option value="geography">🌍 Географія</option>
+        <option value="informatics">💻 Інформатика</option>
+      </select>
+    </div>
+  </header>
+
+  <!-- Чат-зона -->
+  <main id="chat-box" class="flex-1 overflow-y-auto p-4 space-y-4">
+    <div class="flex items-start gap-2.5">
+      <div class="w-8 h-8 rounded-lg bg-indigo-600 flex items-center justify-center text-sm shrink-0">💡</div>
+      <div id="welcome-message" class="bg-slate-800 border border-slate-700 rounded-2xl rounded-tl-none p-3.5 max-w-[88%] text-sm leading-relaxed chat-bubble">
+        Привіт! Це <strong>Ctrl+Think</strong>.<br><br>
+        Обери потрібний предмет зверху, зроби 📸 <strong>фото завдання</strong> або напиши запитання. Ми розберемо все крок за кроком, без сліпого списування!
+      </div>
+    </div>
+  </main>
+
+  <!-- Прев'ю фото -->
+  <div id="image-preview-container" class="hidden px-4 py-2 bg-slate-800 border-t border-slate-700 flex items-center justify-between">
+    <div class="flex items-center gap-3">
+      <img id="image-preview" src="" alt="Фото завдання" class="h-14 w-14 object-cover rounded-lg border border-slate-600">
+      <span class="text-xs text-slate-300">Фото додано до запитання</span>
+    </div>
+    <button onclick="removeImage()" class="text-rose-400 text-xs px-2 py-1 hover:bg-slate-700 rounded">Видалити ✕</button>
+  </div>
+
+  <!-- Нижня панель введення -->
+  <footer class="bg-slate-800 border-t border-slate-700 p-3">
+    <div class="flex items-center justify-between mb-2 px-1">
+      <button onclick="assistPrompt()" class="text-[11px] text-amber-400 hover:text-amber-300 flex items-center gap-1">
+        <span>🎓 Покращити запитання (Prompt Coach)</span>
+      </button>
+      <span id="engine-indicator" class="text-[10px] text-emerald-400">● Хмара (Gemini)</span>
+    </div>
+
+    <form id="chat-form" onsubmit="handleSend(event)" class="flex items-center gap-2">
+      <label class="cursor-pointer p-2.5 bg-slate-700 hover:bg-slate-600 rounded-xl text-slate-200 flex items-center justify-center transition">
+        📷
+        <input type="file" id="camera-input" accept="image/*" capture="environment" class="hidden" onchange="handleImageSelect(event)">
+      </label>
+
+      <textarea id="user-input" rows="1" placeholder="Запитай щось або сфотографуй вправу..." 
+        class="flex-1 bg-slate-900 border border-slate-700 rounded-xl px-3.5 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500 resize-none max-h-24"></textarea>
+
+      <button type="submit" id="send-btn" class="p-2.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl font-bold transition">
+        ➤
+      </button>
+    </form>
+  </footer>
+
+  <!-- Модальне вікно налаштувань -->
+  <div id="settings-modal" class="hidden fixed inset-0 bg-black/75 flex items-center justify-center p-4 z-50">
+    <div class="bg-slate-800 border border-slate-700 w-full max-w-md rounded-2xl p-5 space-y-4">
+      <div class="flex justify-between items-center">
+        <h2 class="text-base font-bold text-white">⚙️ Налаштування Ctrl+Think</h2>
+        <button onclick="toggleModal('settings-modal')" class="text-slate-400 hover:text-white text-lg">✕</button>
+      </div>
+
+      <div class="space-y-3 text-sm">
+        <div>
+          <label class="block text-xs font-semibold text-slate-300 mb-1">Google Gemini API Ключ (Хмара):</label>
+          <input type="password" id="gemini-key" placeholder="AIzaSy..." 
+            class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-xs text-white focus:outline-none focus:border-indigo-500">
+          <p class="text-[10px] text-slate-400 mt-1">Зберігається в локальній пам'яті браузера пристрою.</p>
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-300 mb-1">Адреса сервера Ollama (Міні-ПК / Ноутбук):</label>
+          <input type="text" id="ollama-url" value="http://localhost:11434" 
+            class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-xs text-white focus:outline-none focus:border-indigo-500">
+          <p class="text-[10px] text-slate-400 mt-1">Наприклад: <code>http://192.168.1.50:11434</code> для домашньої мережі.</p>
+        </div>
+
+        <div class="pt-2">
+          <button onclick="saveSettings()" class="w-full py-2 bg-indigo-600 hover:bg-indigo-500 font-bold rounded-lg text-white text-xs transition">
+            Зберегти налаштування
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let currentBase64Image = null;
+
+    document.addEventListener("DOMContentLoaded", () => {
+      document.getElementById('gemini-key').value = localStorage.getItem('ctrl_think_gemini_key') || '';
+      document.getElementById('ollama-url').value = localStorage.getItem('ctrl_think_ollama_url') || 'http://localhost:11434';
+      window.addEventListener('online', updateOnlineStatus);
+      window.addEventListener('offline', updateOnlineStatus);
+      updateOnlineStatus();
+    });
+
+    function toggleModal(id) {
+      document.getElementById(id).classList.toggle('hidden');
+    }
+
+    function saveSettings() {
+      const key = document.getElementById('gemini-key').value.trim();
+      const url = document.getElementById('ollama-url').value.trim();
+      localStorage.setItem('ctrl_think_gemini_key', key);
+      localStorage.setItem('ctrl_think_ollama_url', url);
+      toggleModal('settings-modal');
+      alert("Налаштування збережено!");
+    }
+
+    function updateOnlineStatus() {
+      const banner = document.getElementById('offline-banner');
+      const indicator = document.getElementById('engine-indicator');
+      if (navigator.onLine) {
+        banner.classList.add('hidden');
+        indicator.textContent = '● Хмара (Gemini)';
+        indicator.className = 'text-[10px] text-emerald-400';
+      } else {
+        banner.classList.remove('hidden');
+        indicator.textContent = '● Офлайн (Ollama)';
+        indicator.className = 'text-[10px] text-amber-400';
+      }
+    }
+
+    function handleImageSelect(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        currentBase64Image = e.target.result.split(',')[1];
+        document.getElementById('image-preview').src = e.target.result;
+        document.getElementById('image-preview-container').classList.remove('hidden');
+      };
+      reader.readAsDataURL(file);
+    }
+
+    function removeImage() {
+      currentBase64Image = null;
+      document.getElementById('camera-input').value = '';
+      document.getElementById('image-preview-container').classList.add('hidden');
+    }
+
+    function renderLaTeX(element) {
+      if (window.renderMathInElement) {
+        renderMathInElement(element, {
+          delimiters: [
+            {left: '$$', right: '$$', display: true},
+            {left: '$', right: '$', display: false}
+          ],
+          throwOnError: false
+        });
+      }
+    }
+
+    function appendMessage(role, text) {
+      const chatBox = document.getElementById('chat-box');
+      const wrapper = document.createElement('div');
+      wrapper.className = role === 'user' ? 'flex justify-end' : 'flex items-start gap-2.5';
+
+      if (role === 'user') {
+        const bubble = document.createElement('div');
+        bubble.className = 'bg-indigo-600 text-white rounded-2xl rounded-tr-none p-3 max-w-[85%] text-sm chat-bubble';
+        bubble.textContent = text;
+        wrapper.appendChild(bubble);
+      } else {
+        const avatar = document.createElement('div');
+        avatar.className = 'w-8 h-8 rounded-lg bg-indigo-600 flex items-center justify-center text-sm shrink-0';
+        avatar.textContent = '💡';
+        wrapper.appendChild(avatar);
+
+        const bubble = document.createElement('div');
+        bubble.className = 'bg-slate-800 border border-slate-700 rounded-2xl rounded-tl-none p-3.5 max-w-[85%] text-sm leading-relaxed chat-bubble text-slate-100';
+        bubble.innerHTML = marked.parse(text);
+        renderLaTeX(bubble);
+        wrapper.appendChild(bubble);
+      }
+
+      chatBox.appendChild(wrapper);
+      chatBox.scrollTop = chatBox.scrollHeight;
+      return wrapper.querySelector('.chat-bubble');
+    }
+
+    function handleSubjectChange() {
+      const subject = document.getElementById('study-subject').value;
+      const input = document.getElementById('user-input');
+      const promptsMap = {
+        math: "Запитай про рівняння, задачу з геометрії або сфотографуй підручник...",
+        english: "Напиши англійське речення або запитай про граматичний час...",
+        ukrainian: "Запитай про правило правопису, розділові знаки або твір...",
+        physics: "Запитай про фізичний закон, одиниці вимірювання чи задачу...",
+        chemistry: "Запитай про рівняння реакції, валентність чи хімічний елемент...",
+        biology: "Запитай про будову клітини, орган чи явище в природі...",
+        history: "Запитай про дату, причини події чи історичну особу...",
+        geography: "Запитай про координати, карту чи кліматичний пояс...",
+        informatics: "Запитай про логіку алгоритму або фрагмент коду..."
+      };
+      input.placeholder = promptsMap[subject] || "Запитай щось або сфотографуй вправу...";
+    }
+
+    function buildSystemPrompt() {
+      const level = document.getElementById('study-level').value;
+      const subject = document.getElementById('study-subject').value;
+
+      const levelGuides = {
+        standard: "Рівень: Стандарт програми середньої школи (НУШ). Пояснюй просто, наочно, без завантаження академізмом.",
+        advanced: "Рівень: Олімпіадний / Профільний. Стимулюй нестандартні шляхи розв'язання, глибинні закономірності, критичне мислення.",
+        nmt: "Рівень: Підготовка до НМТ. Фокус на тестових пастках, оптимізації часу розв'язку та типових алгоритмах тестування."
+      };
+
+      const subjectGuides = {
+        math: "Предмет: Математика. Завжди використовуй формули LaTeX ($a^2 + b^2 = c^2$). Не пиши повну відповідь! Допоможи з'ясувати перший логічний крок.",
+        english: "Предмет: Англійська мова. Якщо є помилка в реченні, не виправляй мовчки: підкажи, в якій частині мови чи часі нестиковка, і запитай як виправити.",
+        ukrainian: "Предмет: Українська мова та література. Пояснюй правила орфографії й пунктуації через приклади, а літературні твори розбирай через конфлікт і мотивацію героїв.",
+        physics: "Предмет: Фізика. Спочатку запитай учня про фізичну суть явища і які величини відомі за умовою (СІ), лише потім переходьте до формул.",
+        chemistry: "Предмет: Хімія. Пояснюй через поняття валентності, будови речовин та закони збереження маси. Використовуй коректні індекси та коефіцієнти.",
+        biology: "Предмет: Біологія. Пояснюй зв'язок будови та функцій органів/клітин, використовуй зрозумілі біологічні аналогії.",
+        history: "Предмет: Історія. Не просто називай дати: став запитання про передумови, мотиви учасників та наслідки подій.",
+        geography: "Предмет: Географія. Акцентуй на причинно-наслідкових зв'язках (чому саме такий клімат чи ландшафт) та просторовому мисленні.",
+        informatics: "Предмет: Інформатика. Допомагай знайти помилку в алгоритмі або синтаксисі запитаннями. Ніколи не скидай повний готовий код!"
+      };
+
+      return `Ти — персональний наставник системи "Ctrl+Think" для школяра.
+ГОЛОВНЕ ПРАВИЛО: НЕ ВИДАВАЙ ГОТОВУ ВІДПОВІДЬ ОДРАЗУ! Застосовуй Сократівський метод.
+${levelGuides[level] || levelGuides.standard}
+${subjectGuides[subject] || subjectGuides.math}
+
+Твій підхід:
+1. Якщо надіслано фото завдання — чітко розпізнай умову та виділи ключове запитання.
+2. Дай ОДНУ маленьку підказку або постав ОДНЕ навідне запитання, щоб учень зробив крок самостійно.
+3. Підтримуй, хвали за правильні спроби і спілкуйся живою сучасною українською мовою.`;
+    }
+
+    function assistPrompt() {
+      const input = document.getElementById('user-input');
+      const subject = document.getElementById('study-subject').value;
+      const val = input.value.trim();
+
+      const templates = {
+        math: val ? `Я застряг у цьому місці: "${val}". Яке правило тут треба застосувати?` : "Поясни перший крок у цій задачі:",
+        english: val ? `Чи є граматична помилка в цьому реченні: "${val}"?` : "Поясни, яка різниця між цими двома часами:",
+        physics: val ? `Яку формулу тут потрібно застосувати і чому саме її: "${val}"?` : "Допоможи зрозуміти фізичний зміст цього закону:",
+        chemistry: val ? `Як правильно урівняти цю реакцію: "${val}"?` : "Як визначити валентність у цій сполуці:",
+        ukrainian: val ? `Яке правило пояснює написання цього слова/коми: "${val}"?` : "Допоможи розібрати будову цього речення:",
+        history: val ? `Які були головні причини цієї події: "${val}"?` : "Допоможи зрозуміти наслідки цієї історичної події:"
+      };
+
+      input.value = templates[subject] || `Допоможи мені розібратися з цим питанням: "${val}"`;
+      input.focus();
+    }
+
+    async function handleSend(e) {
+      e.preventDefault();
+      const input = document.getElementById('user-input');
+      const text = input.value.trim();
+      if (!text && !currentBase64Image) return;
+
+      appendMessage('user', text || "[Фото завдання]");
+      input.value = '';
+      const photoToSend = currentBase64Image;
+      removeImage();
+
+      const thinkingBubble = appendMessage('assistant', "Аналізую завдання... 🤔");
+
+      try {
+        if (navigator.onLine && localStorage.getItem('ctrl_think_gemini_key')) {
+          await callGemini(text, photoToSend, thinkingBubble);
+        } else {
+          await callOllama(text, thinkingBubble);
+        }
+      } catch (err) {
+        thinkingBubble.innerHTML = `<span class="text-rose-400">Помилка: ${err.message}. Перевірте налаштування ⚙️ або доступ до інтернету.</span>`;
+      }
+    }
+
+    async function callGemini(userText, base64Img, responseElement) {
+      const apiKey = localStorage.getItem('ctrl_think_gemini_key');
+      const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
+
+      const parts = [];
+      if (base64Img) {
+        parts.push({
+          inlineData: { mimeType: "image/jpeg", data: base64Img }
+        });
+      }
+      parts.push({ text: userText || "Допоможи мені самостійно розібратися з цим завданням на фото." });
+
+      const payload = {
+        systemInstruction: { parts: [{ text: buildSystemPrompt() }] },
+        contents: [{ role: "user", parts: parts }]
+      };
+
+      const res = await fetch(endpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error?.message || "Помилка відповіді API");
+      }
+
+      const data = await res.json();
+      const reply = data.candidates?.[0]?.content?.parts?.[0]?.text || "Не вдалося отримати відповідь.";
+      responseElement.innerHTML = marked.parse(reply);
+      renderLaTeX(responseElement);
+    }
+
+    async function callOllama(userText, responseElement) {
+      const ollamaUrl = localStorage.getItem('ctrl_think_ollama_url') || 'http://localhost:11434';
+      const payload = {
+        model: "qwen2.5:7b",
+        prompt: `${buildSystemPrompt()}\n\nУчень: ${userText}\nНаставник:`,
+        stream: false
+      };
+
+      const res = await fetch(`${ollamaUrl}/api/generate`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+
+      if (!res.ok) throw new Error("Локальний сервер Ollama не відповідає.");
+      const data = await res.json();
+      responseElement.innerHTML = marked.parse(data.response);
+      renderLaTeX(responseElement);
+    }
+  </script>
+</body>
+</html>
 
