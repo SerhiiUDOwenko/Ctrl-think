@@ -2,43 +2,53 @@
 <html lang="uk">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>Ctrl+Think | Навчальний наставник для школи</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, interactive-widget=resizes-content">
+  <title>Ctrl+Think | Навчальний наставник</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css">
   <script src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/contrib/auto-render.min.js"></script>
   <style>
-    body { -webkit-tap-highlight-color: transparent; }
+    /* Жорстка фіксація екрана для мобільних браузерів */
+    html, body {
+      height: 100%;
+      height: 100dvh;
+      overflow: hidden;
+      overscroll-behavior: none;
+      -webkit-tap-highlight-color: transparent;
+    }
     .chat-bubble { word-break: break-word; }
+    /* Стилізація смуги прокрутки */
+    ::-webkit-scrollbar { width: 4px; }
+    ::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
   </style>
 </head>
-<body class="bg-slate-900 text-slate-100 flex flex-col h-screen overflow-hidden font-sans">
+<body class="bg-slate-900 text-slate-100 flex flex-col h-full overflow-hidden font-sans select-none">
 
   <!-- Сповіщення про статус мережі -->
-  <div id="offline-banner" class="hidden bg-amber-600 text-white text-xs px-4 py-1.5 flex justify-between items-center transition-all z-20">
+  <div id="offline-banner" class="hidden bg-amber-600 text-white text-xs px-4 py-1.5 flex justify-between items-center transition-all z-30 shrink-0">
     <div class="flex items-center gap-1.5">
-      <span>⚠️ Інтернет відсутній. Працює локальний режим (Ollama).</span>
+      <span>⚠️ Немає інтернету. Працює локальний режим (Ollama).</span>
     </div>
     <button onclick="updateOnlineStatus()" class="underline font-bold">Оновити</button>
   </div>
 
-  <!-- Верхня панель -->
-  <header class="bg-slate-800 border-b border-slate-700 px-3 py-2.5 flex flex-col gap-2 shadow-md z-10">
+  <!-- Верхня закріплена панель -->
+  <header class="bg-slate-800 border-b border-slate-700 px-3 py-2 flex flex-col gap-1.5 shadow-md z-20 shrink-0">
     <div class="flex items-center justify-between">
       <div class="flex items-center space-x-2">
         <div class="w-8 h-8 rounded-xl bg-gradient-to-tr from-indigo-600 to-violet-500 flex items-center justify-center text-base font-black shadow">⌨️</div>
         <div>
           <h1 class="text-sm font-bold tracking-tight text-white flex items-center gap-1">
             <span>Ctrl+Think</span>
-            <span class="text-[9px] bg-indigo-500/30 text-indigo-300 font-mono px-1.5 py-0.2 rounded border border-indigo-500/40">v1.2</span>
+            <span class="text-[9px] bg-indigo-500/30 text-indigo-300 font-mono px-1.5 py-0.5 rounded border border-indigo-500/40">v1.3</span>
           </h1>
-          <p class="text-[10px] text-slate-400">Думай замість копіювання</p>
+          <p class="text-[10px] text-slate-400">Думай замість Ctrl+V</p>
         </div>
       </div>
 
-      <!-- Кнопка налаштувань -->
+      <!-- Вибір режиму та налаштування -->
       <div class="flex items-center space-x-1.5">
         <select id="study-level" class="bg-slate-700 text-xs text-white rounded-lg px-2 py-1.5 border border-slate-600 focus:outline-none focus:border-indigo-500">
           <option value="standard">📘 Стандарт</option>
@@ -52,12 +62,12 @@
     </div>
 
     <!-- Вибір предмету -->
-    <div class="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none text-xs">
+    <div class="flex items-center gap-2 overflow-x-auto pb-0.5 text-xs">
       <span class="text-[11px] text-slate-400 shrink-0 font-medium">Предмет:</span>
       <select id="study-subject" onchange="handleSubjectChange()" class="bg-slate-900 border border-indigo-500/50 text-indigo-200 rounded-lg px-2 py-1 focus:outline-none focus:border-indigo-400 text-xs w-full max-w-xs font-medium">
+        <option value="ukrainian">🇺🇦 Українська мова та література</option>
         <option value="math">📐 Математика (Алгебра / Геометрія)</option>
         <option value="english">🇬🇧 Англійська мова</option>
-        <option value="ukrainian">🇺🇦 Українська мова та література</option>
         <option value="physics">⚡ Фізика</option>
         <option value="chemistry">🧪 Хімія</option>
         <option value="biology">🌿 Біологія / Природничі науки</option>
@@ -69,44 +79,56 @@
   </header>
 
   <!-- Чат-зона -->
-  <main id="chat-box" class="flex-1 overflow-y-auto p-4 space-y-4">
+  <main id="chat-box" class="flex-1 overflow-y-auto p-4 space-y-4 select-text">
     <div class="flex items-start gap-2.5">
       <div class="w-8 h-8 rounded-lg bg-indigo-600 flex items-center justify-center text-sm shrink-0">💡</div>
-      <div id="welcome-message" class="bg-slate-800 border border-slate-700 rounded-2xl rounded-tl-none p-3.5 max-w-[88%] text-sm leading-relaxed chat-bubble">
+      <div class="bg-slate-800 border border-slate-700 rounded-2xl rounded-tl-none p-3.5 max-w-[88%] text-sm leading-relaxed chat-bubble">
         Привіт! Це <strong>Ctrl+Think</strong>.<br><br>
-        Обери потрібний предмет зверху, зроби 📸 <strong>фото завдання</strong> або напиши запитання. Ми розберемо все крок за кроком, без сліпого списування!
+        Можна сфотографувати 📸 завдання, прикріпити 📎 <strong>фото або PDF-сторінку</strong> з файлів, або просто написати запитання.<br>
+        Розбираємо все покроково, без банального списування!
       </div>
     </div>
   </main>
 
-  <!-- Прев'ю фото -->
-  <div id="image-preview-container" class="hidden px-4 py-2 bg-slate-800 border-t border-slate-700 flex items-center justify-between">
-    <div class="flex items-center gap-3">
-      <img id="image-preview" src="" alt="Фото завдання" class="h-14 w-14 object-cover rounded-lg border border-slate-600">
-      <span class="text-xs text-slate-300">Фото додано до запитання</span>
+  <!-- Прев'ю прикріпленого файлу (Фото або PDF) -->
+  <div id="file-preview-container" class="hidden px-4 py-2 bg-slate-800 border-t border-slate-700 flex items-center justify-between shrink-0">
+    <div class="flex items-center gap-3 overflow-hidden">
+      <img id="image-preview" src="" alt="Прев'ю" class="hidden h-12 w-12 object-cover rounded-lg border border-slate-600 shrink-0">
+      <div id="pdf-preview-icon" class="hidden w-10 h-10 bg-rose-600/30 text-rose-300 border border-rose-500/50 rounded-lg flex items-center justify-center text-lg shrink-0">📄</div>
+      <span id="file-name-preview" class="text-xs text-slate-300 truncate max-w-[200px]">Файл додано</span>
     </div>
-    <button onclick="removeImage()" class="text-rose-400 text-xs px-2 py-1 hover:bg-slate-700 rounded">Видалити ✕</button>
+    <button onclick="removeAttachedFile()" class="text-rose-400 text-xs px-2 py-1 hover:bg-slate-700 rounded font-bold">Видалити ✕</button>
   </div>
 
-  <!-- Нижня панель введення -->
-  <footer class="bg-slate-800 border-t border-slate-700 p-3">
-    <div class="flex items-center justify-between mb-2 px-1">
+  <!-- Нижня закріплена панель введення -->
+  <footer class="bg-slate-800 border-t border-slate-700 p-2.5 shrink-0">
+    <div class="flex items-center justify-between mb-1.5 px-1">
       <button onclick="assistPrompt()" class="text-[11px] text-amber-400 hover:text-amber-300 flex items-center gap-1">
         <span>🎓 Покращити запитання (Prompt Coach)</span>
       </button>
       <span id="engine-indicator" class="text-[10px] text-emerald-400">● Хмара (Gemini)</span>
     </div>
 
-    <form id="chat-form" onsubmit="handleSend(event)" class="flex items-center gap-2">
-      <label class="cursor-pointer p-2.5 bg-slate-700 hover:bg-slate-600 rounded-xl text-slate-200 flex items-center justify-center transition">
-        📷
-        <input type="file" id="camera-input" accept="image/*" capture="environment" class="hidden" onchange="handleImageSelect(event)">
+    <form id="chat-form" onsubmit="handleSend(event)" class="flex items-end gap-1.5">
+      <!-- Кнопка 1: Камера смартфона -->
+      <label title="Зробити фото камерою" class="cursor-pointer p-2.5 bg-slate-700 hover:bg-slate-600 rounded-xl text-slate-200 flex items-center justify-center transition shrink-0">
+        📸
+        <input type="file" id="camera-input" accept="image/*" capture="environment" class="hidden" onchange="handleFileSelect(event)">
       </label>
 
-      <textarea id="user-input" rows="1" placeholder="Запитай щось або сфотографуй вправу..." 
-        class="flex-1 bg-slate-900 border border-slate-700 rounded-xl px-3.5 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500 resize-none max-h-24"></textarea>
+      <!-- Кнопка 2: Прикріпити фото / PDF з пам'яті -->
+      <label title="Обрати фото чи PDF з файлів" class="cursor-pointer p-2.5 bg-slate-700 hover:bg-slate-600 rounded-xl text-slate-200 flex items-center justify-center transition shrink-0">
+        📎
+        <input type="file" id="storage-input" accept="image/*,application/pdf" class="hidden" onchange="handleFileSelect(event)">
+      </label>
 
-      <button type="submit" id="send-btn" class="p-2.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl font-bold transition">
+      <!-- Динамічне текстове поле -->
+      <textarea id="user-input" rows="1" placeholder="Запитай щось або надішли завдання..." 
+        oninput="autoResizeTextarea(this)"
+        class="flex-1 bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500 resize-none max-h-32 leading-snug overflow-y-auto"></textarea>
+
+      <!-- Кнопка відправки -->
+      <button type="submit" id="send-btn" class="p-2.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl font-bold transition shrink-0">
         ➤
       </button>
     </form>
@@ -125,7 +147,7 @@
           <label class="block text-xs font-semibold text-slate-300 mb-1">Google Gemini API Ключ (Хмара):</label>
           <input type="password" id="gemini-key" placeholder="AIzaSy..." 
             class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-xs text-white focus:outline-none focus:border-indigo-500">
-          <p class="text-[10px] text-slate-400 mt-1">Зберігається в локальній пам'яті браузера пристрою.</p>
+          <p class="text-[10px] text-slate-400 mt-1">Зберігається в локальній пам'яті вашого браузера.</p>
         </div>
 
         <div>
@@ -145,7 +167,7 @@
   </div>
 
   <script>
-    let currentBase64Image = null;
+    let attachedFile = null; // { base64, mimeType, name }
 
     document.addEventListener("DOMContentLoaded", () => {
       document.getElementById('gemini-key').value = localStorage.getItem('ctrl_think_gemini_key') || '';
@@ -153,7 +175,14 @@
       window.addEventListener('online', updateOnlineStatus);
       window.addEventListener('offline', updateOnlineStatus);
       updateOnlineStatus();
+      handleSubjectChange();
     });
+
+    // Автоматичне динамічне розгортання textarea
+    function autoResizeTextarea(el) {
+      el.style.height = 'auto';
+      el.style.height = Math.min(el.scrollHeight, 128) + 'px';
+    }
 
     function toggleModal(id) {
       document.getElementById(id).classList.toggle('hidden');
@@ -165,7 +194,7 @@
       localStorage.setItem('ctrl_think_gemini_key', key);
       localStorage.setItem('ctrl_think_ollama_url', url);
       toggleModal('settings-modal');
-      alert("Налаштування збережено!");
+      alert("Налаштування оновлено!");
     }
 
     function updateOnlineStatus() {
@@ -182,23 +211,46 @@
       }
     }
 
-    function handleImageSelect(event) {
+    // Обробка вибору файлів (фото з камери, зображення з галереї чи PDF)
+    function handleFileSelect(event) {
       const file = event.target.files[0];
       if (!file) return;
 
       const reader = new FileReader();
       reader.onload = function(e) {
-        currentBase64Image = e.target.result.split(',')[1];
-        document.getElementById('image-preview').src = e.target.result;
-        document.getElementById('image-preview-container').classList.remove('hidden');
+        const base64Data = e.target.result.split(',')[1];
+        attachedFile = {
+          base64: base64Data,
+          mimeType: file.type || (file.name.endsWith('.pdf') ? 'application/pdf' : 'image/jpeg'),
+          name: file.name
+        };
+
+        const previewContainer = document.getElementById('file-preview-container');
+        const imgEl = document.getElementById('image-preview');
+        const pdfEl = document.getElementById('pdf-preview-icon');
+        const nameEl = document.getElementById('file-name-preview');
+
+        nameEl.textContent = file.name;
+
+        if (attachedFile.mimeType.startsWith('image/')) {
+          imgEl.src = e.target.result;
+          imgEl.classList.remove('hidden');
+          pdfEl.classList.add('hidden');
+        } else {
+          imgEl.classList.add('hidden');
+          pdfEl.classList.remove('hidden');
+        }
+
+        previewContainer.classList.remove('hidden');
       };
       reader.readAsDataURL(file);
     }
 
-    function removeImage() {
-      currentBase64Image = null;
+    function removeAttachedFile() {
+      attachedFile = null;
       document.getElementById('camera-input').value = '';
-      document.getElementById('image-preview-container').classList.add('hidden');
+      document.getElementById('storage-input').value = '';
+      document.getElementById('file-preview-container').classList.add('hidden');
     }
 
     function renderLaTeX(element) {
@@ -245,17 +297,17 @@
       const subject = document.getElementById('study-subject').value;
       const input = document.getElementById('user-input');
       const promptsMap = {
-        math: "Запитай про рівняння, задачу з геометрії або сфотографуй підручник...",
-        english: "Напиши англійське речення або запитай про граматичний час...",
-        ukrainian: "Запитай про правило правопису, розділові знаки або твір...",
-        physics: "Запитай про фізичний закон, одиниці вимірювання чи задачу...",
-        chemistry: "Запитай про рівняння реакції, валентність чи хімічний елемент...",
-        biology: "Запитай про будову клітини, орган чи явище в природі...",
-        history: "Запитай про дату, причини події чи історичну особу...",
-        geography: "Запитай про координати, карту чи кліматичний пояс...",
-        informatics: "Запитай про логіку алгоритму або фрагмент коду..."
+        ukrainian: "Напиши слова чи речення, або запитай про правило правопису...",
+        math: "Запитай про рівняння, геометричну фігуру або вклади фото...",
+        english: "Напиши англійське речення або запитай про правило...",
+        physics: "Запитай про закон, задачу або одиниці вимірювання...",
+        chemistry: "Запитай про реакцію, формулу або валентність...",
+        biology: "Запитай про живий організм, клітину чи явище...",
+        history: "Запитай про подію, історичну особу чи дату...",
+        geography: "Запитай про карту, клімат чи країну...",
+        informatics: "Запитай про алгоритм або фрагмент коду..."
       };
-      input.placeholder = promptsMap[subject] || "Запитай щось або сфотографуй вправу...";
+      input.placeholder = promptsMap[subject] || "Запитай щось або вклади файл...";
     }
 
     function buildSystemPrompt() {
@@ -263,32 +315,32 @@
       const subject = document.getElementById('study-subject').value;
 
       const levelGuides = {
-        standard: "Рівень: Стандарт програми середньої школи (НУШ). Пояснюй просто, наочно, без завантаження академізмом.",
-        advanced: "Рівень: Олімпіадний / Профільний. Стимулюй нестандартні шляхи розв'язання, глибинні закономірності, критичне мислення.",
-        nmt: "Рівень: Підготовка до НМТ. Фокус на тестових пастках, оптимізації часу розв'язку та типових алгоритмах тестування."
+        standard: "Рівень: Стандарт середньої школи (НУШ). Зрозуміла мова, аналогії, покроковий розбір.",
+        advanced: "Рівень: Олімпіадний / Профільний. Спонукай до нестандартних шляхів, розкривай глибинні закономірності.",
+        nmt: "Рівень: Підготовка до НМТ. Фокус на тестових пастках, алгоритмах і швидкості розв'язку."
       };
 
       const subjectGuides = {
-        math: "Предмет: Математика. Завжди використовуй формули LaTeX ($a^2 + b^2 = c^2$). Не пиши повну відповідь! Допоможи з'ясувати перший логічний крок.",
-        english: "Предмет: Англійська мова. Якщо є помилка в реченні, не виправляй мовчки: підкажи, в якій частині мови чи часі нестиковка, і запитай як виправити.",
-        ukrainian: "Предмет: Українська мова та література. Пояснюй правила орфографії й пунктуації через приклади, а літературні твори розбирай через конфлікт і мотивацію героїв.",
-        physics: "Предмет: Фізика. Спочатку запитай учня про фізичну суть явища і які величини відомі за умовою (СІ), лише потім переходьте до формул.",
-        chemistry: "Предмет: Хімія. Пояснюй через поняття валентності, будови речовин та закони збереження маси. Використовуй коректні індекси та коефіцієнти.",
-        biology: "Предмет: Біологія. Пояснюй зв'язок будови та функцій органів/клітин, використовуй зрозумілі біологічні аналогії.",
-        history: "Предмет: Історія. Не просто називай дати: став запитання про передумови, мотиви учасників та наслідки подій.",
-        geography: "Предмет: Географія. Акцентуй на причинно-наслідкових зв'язках (чому саме такий клімат чи ландшафт) та просторовому мисленні.",
-        informatics: "Предмет: Інформатика. Допомагай знайти помилку в алгоритмі або синтаксисі запитаннями. Ніколи не скидай повний готовий код!"
+        ukrainian: "Предмет: Українська мова та література. Допомагай зрозуміти правила (разом/дефіс/окремо, апостроф, розділові знаки) через запитання й контекст.",
+        math: "Предмет: Математика. Завжди оформлюй формули в LaTeX ($x^2$). Не давай фінальний результат — підкажи лише перший крок.",
+        english: "Предмет: Англійська мова. Якщо в реченні помилка — підкажи частину мови чи час і запитай, яке тут діє правило.",
+        physics: "Предмет: Фізика. Спочатку з'ясуйте суть явища і відомі величини, а тоді переходьте до формул.",
+        chemistry: "Предмет: Хімія. Опирайся на валентність, закон збереження маси й будову сполук.",
+        biology: "Предмет: Біологія. Пояснюй зв'язки між будовою та функціями організмів.",
+        history: "Предмет: Історія. Пояснюй причинно-наслідкові зв'язки та контекст епохи.",
+        geography: "Предмет: Географія. Розвивай просторове мислення та аналіз закономірностей природи.",
+        informatics: "Предмет: Інформатика. Допомагай шукати логічні помилки запитаннями. Не пиши готовий код!"
       };
 
-      return `Ти — персональний наставник системи "Ctrl+Think" для школяра.
-ГОЛОВНЕ ПРАВИЛО: НЕ ВИДАВАЙ ГОТОВУ ВІДПОВІДЬ ОДРАЗУ! Застосовуй Сократівський метод.
+      return `Ти — персональний наставник "Ctrl+Think" для школяра.
+ГОЛОВНЕ ПРАВИЛО: НЕ ДАВАЙ ГОТОВУ ВІДПОВІДЬ ОДРАЗУ! Застосовуй Сократівський діалог.
 ${levelGuides[level] || levelGuides.standard}
-${subjectGuides[subject] || subjectGuides.math}
+${subjectGuides[subject] || subjectGuides.ukrainian}
 
-Твій підхід:
-1. Якщо надіслано фото завдання — чітко розпізнай умову та виділи ключове запитання.
+Алгоритм:
+1. Якщо надіслано фото або PDF — чітко розпізнай умову завдання.
 2. Дай ОДНУ маленьку підказку або постав ОДНЕ навідне запитання, щоб учень зробив крок самостійно.
-3. Підтримуй, хвали за правильні спроби і спілкуйся живою сучасною українською мовою.`;
+3. Підтримуй дружній, сучасний і підбадьорливий тон.`;
     }
 
     function assistPrompt() {
@@ -297,15 +349,14 @@ ${subjectGuides[subject] || subjectGuides.math}
       const val = input.value.trim();
 
       const templates = {
-        math: val ? `Я застряг у цьому місці: "${val}". Яке правило тут треба застосувати?` : "Поясни перший крок у цій задачі:",
-        english: val ? `Чи є граматична помилка в цьому реченні: "${val}"?` : "Поясни, яка різниця між цими двома часами:",
-        physics: val ? `Яку формулу тут потрібно застосувати і чому саме її: "${val}"?` : "Допоможи зрозуміти фізичний зміст цього закону:",
-        chemistry: val ? `Як правильно урівняти цю реакцію: "${val}"?` : "Як визначити валентність у цій сполуці:",
-        ukrainian: val ? `Яке правило пояснює написання цього слова/коми: "${val}"?` : "Допоможи розібрати будову цього речення:",
-        history: val ? `Які були головні причини цієї події: "${val}"?` : "Допоможи зрозуміти наслідки цієї історичної події:"
+        ukrainian: val ? `Яке правило пояснює правопис цього слова/фрази: "${val}"?` : "Поясни правило написання слів разом чи через дефіс:",
+        math: val ? `Я застряг у цьому місці: "${val}". Який наступний крок?` : "Підкажи перший крок у цій задачі:",
+        english: val ? `Чи є граматична неточність у цьому реченні: "${val}"?` : "Поясни різницю між цими граматичними часами:",
+        physics: val ? `Який фізичний закон тут діє: "${val}"?` : "Допоможи зрозуміти фізичний зміст цього закону:"
       };
 
-      input.value = templates[subject] || `Допоможи мені розібратися з цим питанням: "${val}"`;
+      input.value = templates[subject] || `Допоможи мені самостійно розібратися: "${val}"`;
+      autoResizeTextarea(input);
       input.focus();
     }
 
@@ -313,58 +364,81 @@ ${subjectGuides[subject] || subjectGuides.math}
       e.preventDefault();
       const input = document.getElementById('user-input');
       const text = input.value.trim();
-      if (!text && !currentBase64Image) return;
+      if (!text && !attachedFile) return;
 
-      appendMessage('user', text || "[Фото завдання]");
+      const userDisplay = text || (attachedFile.mimeType.startsWith('image/') ? "[Фото завдання]" : `[PDF: ${attachedFile.name}]`);
+      appendMessage('user', userDisplay);
+
       input.value = '';
-      const photoToSend = currentBase64Image;
-      removeImage();
+      input.style.height = 'auto'; // Скидання висоти поля
+      const fileToSend = attachedFile;
+      removeAttachedFile();
 
       const thinkingBubble = appendMessage('assistant', "Аналізую завдання... 🤔");
 
       try {
         if (navigator.onLine && localStorage.getItem('ctrl_think_gemini_key')) {
-          await callGemini(text, photoToSend, thinkingBubble);
+          await callGeminiWithFallback(text, fileToSend, thinkingBubble);
         } else {
           await callOllama(text, thinkingBubble);
         }
       } catch (err) {
-        thinkingBubble.innerHTML = `<span class="text-rose-400">Помилка: ${err.message}. Перевірте налаштування ⚙️ або доступ до інтернету.</span>`;
+        thinkingBubble.innerHTML = `<span class="text-rose-400">Помилка: ${err.message}. Спробуйте ще раз або перевірте налаштування ⚙️.</span>`;
       }
     }
 
-    async function callGemini(userText, base64Img, responseElement) {
+    // Запит з автоматичним перебором моделей у разі high demand
+    async function callGeminiWithFallback(userText, fileObj, responseElement) {
       const apiKey = localStorage.getItem('ctrl_think_gemini_key');
-      const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent?key=${apiKey}`;
+      const candidateModels = [
+        'gemini-2.5-flash',
+        'gemini-2.0-flash',
+        'gemini-1.5-flash'
+      ];
 
       const parts = [];
-      if (base64Img) {
+      if (fileObj) {
         parts.push({
-          inlineData: { mimeType: "image/jpeg", data: base64Img }
+          inlineData: {
+            mimeType: fileObj.mimeType,
+            data: fileObj.base64
+          }
         });
       }
-      parts.push({ text: userText || "Допоможи мені самостійно розібратися з цим завданням на фото." });
+      parts.push({ text: userText || "Допоможи мені розібратися з цим завданням самостійно." });
 
       const payload = {
         systemInstruction: { parts: [{ text: buildSystemPrompt() }] },
         contents: [{ role: "user", parts: parts }]
       };
 
-      const res = await fetch(endpoint, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-      });
+      let lastError = null;
 
-      if (!res.ok) {
-        const err = await res.json();
-        throw new Error(err.error?.message || "Помилка відповіді API");
+      for (const model of candidateModels) {
+        try {
+          const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+          const res = await fetch(endpoint, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+          });
+
+          if (res.ok) {
+            const data = await res.json();
+            const reply = data.candidates?.[0]?.content?.parts?.[0]?.text || "Не вдалося отримати відповідь.";
+            responseElement.innerHTML = marked.parse(reply);
+            renderLaTeX(responseElement);
+            return;
+          }
+
+          const errData = await res.json();
+          lastError = errData.error?.message || `Помилка ${res.status}`;
+        } catch (e) {
+          lastError = e.message;
+        }
       }
 
-      const data = await res.json();
-      const reply = data.candidates?.[0]?.content?.parts?.[0]?.text || "Не вдалося отримати відповідь.";
-      responseElement.innerHTML = marked.parse(reply);
-      renderLaTeX(responseElement);
+      throw new Error(lastError || "Сервери тимчасово перевантажені, повторіть запит через кілька секунд.");
     }
 
     async function callOllama(userText, responseElement) {
@@ -389,4 +463,3 @@ ${subjectGuides[subject] || subjectGuides.math}
   </script>
 </body>
 </html>
-
