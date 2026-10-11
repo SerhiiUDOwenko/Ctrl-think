@@ -391,9 +391,9 @@ ${subjectGuides[subject] || subjectGuides.ukrainian}
     async function callGeminiWithFallback(userText, fileObj, responseElement) {
       const apiKey = localStorage.getItem('ctrl_think_gemini_key');
       const candidateModels = [
+        'gemini-3.8-flash',
         'gemini-2.5-flash',
-        'gemini-2.0-flash',
-        'gemini-1.5-flash'
+        'gemini-2.0-flash'
       ];
 
       const parts = [];
